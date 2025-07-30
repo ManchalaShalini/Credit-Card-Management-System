@@ -20,6 +20,12 @@ import com.example.creditcard.exceptions.UserException;
 import com.example.creditcard.model.User;
 import com.example.creditcard.utils.ControllerHelper;
 
+/**
+ * REST controller responsible for managing user-related operations.
+ * 
+ * Exposes APIs to create, retrieve, update, and delete user records.
+ * Validates incoming request data and communicates with the data access layer (`UserDao`) to perform operations.
+ */
 @RestController
 @RequestMapping("/api")
 public class UserController {
@@ -29,7 +35,13 @@ public class UserController {
     UserController(UserDao userDao) {
         this.userDao = userDao;
     }
-	
+    
+    /**
+     * API to create a new user.
+     *
+     * @param user The user object passed in the request body.
+     * @return A ResponseEntity with success message and created user, or error if validation fails or user is null.
+     */
 	@PostMapping("/createUser")
 	public ResponseEntity<Map<String, Object>> createUser(@RequestBody(required = false) User user) { 
 		//@RequestBody(required = false) allows Spring to pass null instead of throwing a 400 Bad Request automatically when the body is missing — this way you can return a custom message.
@@ -41,13 +53,13 @@ public class UserController {
 	            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 	        }
 			
-			String error = ControllerHelper.validate(user.getUserName(), UserControllerConstants.name);
+			String error = ControllerHelper.validate(user.getUserName(), UserControllerConstants.NAME);
 			if(error != null) {
 				response.put("error", error);
 	            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 			}
 			
-			error = ControllerHelper.validate(user.getEmailAddress(), UserControllerConstants.email);
+			error = ControllerHelper.validate(user.getEmailAddress(), UserControllerConstants.EMAIL);
 			if(error != null) {
 				response.put("error", error);
 	            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
@@ -64,12 +76,18 @@ public class UserController {
 	    return new ResponseEntity<>(response, HttpStatus.CREATED);
 	 }
 	
+	 /**
+     * API to retrieve a user by user ID.
+     *
+     * @param userId The ID of the user to fetch.
+     * @return A ResponseEntity with user details if found, or appropriate error message.
+     */
 	@GetMapping("/getUser/{userId}")
-	public static ResponseEntity<Map<String, Object>> getUser(@PathVariable int userId) {
+	public ResponseEntity<Map<String, Object>> getUser(@PathVariable int userId) {
 	    Map<String, Object> response = new HashMap<>();
 		User user = null;
 		try {
-			String error = ControllerHelper.validate(userId, UserControllerConstants.userId);
+			String error = ControllerHelper.validate(userId, UserControllerConstants.USER_ID);
 			if(error != null) {
 				response.put("error", error);
 	            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
@@ -90,6 +108,13 @@ public class UserController {
 	    return new ResponseEntity<>(response, HttpStatus.OK);
 	}
 	
+	/**
+     * API to delete a user by user ID.
+     *
+     * @param userId The ID of the user to delete.
+     * @return A ResponseEntity indicating success or failure of deletion.
+     * @throws UserException If deletion fails at the DAO layer.
+     */
 	@DeleteMapping("/deleteUser/{userId}")
 	public ResponseEntity<Map<String, Object>> deleteUser(@PathVariable int userId) throws UserException {
 	    Map<String, Object> response = new HashMap<>();
@@ -112,6 +137,13 @@ public class UserController {
 		}
 	}
 	
+	/**
+     * API to update an existing user's name and email.
+     *
+     * @param userId The ID of the user to update.
+     * @param updatedUser The user object with updated fields.
+     * @return A ResponseEntity indicating whether the update was successful.
+     */
 	@PutMapping("/updateUser/{userId}")
 	public ResponseEntity<Map<String, Object>> updateUser(@PathVariable int userId, @RequestBody(required = false) User updatedUser) {
 	    Map<String, Object> response = new HashMap<>();
@@ -126,13 +158,13 @@ public class UserController {
 	            return getUserResponse;
 	        }
 			
-	        String error = ControllerHelper.validate(updatedUser.getUserName(), UserControllerConstants.name);
+	        String error = ControllerHelper.validate(updatedUser.getUserName(), UserControllerConstants.NAME);
 			if(error != null) {
 				response.put("error", error);
 	            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 			}
 			
-			error = ControllerHelper.validate(updatedUser.getEmailAddress(), UserControllerConstants.email);
+			error = ControllerHelper.validate(updatedUser.getEmailAddress(), UserControllerConstants.EMAIL);
 			if(error != null) {
 				response.put("error", error);
 	            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);

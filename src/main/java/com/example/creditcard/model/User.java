@@ -3,6 +3,12 @@ package com.example.creditcard.model;
 import java.util.Date;
 
 // TODO: try using lombok
+/**
+ * Represents a user in the Credit Card Management System.
+ * 
+ * This class contains user-related information including their name, email,
+ * and timestamps for record creation and modification.
+ */
 public class User {
 	private int userId;
 	private String userName;

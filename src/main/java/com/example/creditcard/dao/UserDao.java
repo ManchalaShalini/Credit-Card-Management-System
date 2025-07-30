@@ -5,8 +5,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.azure.security.keyvault.secrets.SecretClient;
@@ -19,6 +17,9 @@ import com.example.creditcard.utils.DatabaseHelper;
 
 import jakarta.annotation.PostConstruct;
 
+/**
+ * DAO class to perform operations on the `users` table like create, read, update, and delete.
+ */
 @Component
 public class UserDao{
 		
@@ -26,14 +27,24 @@ public class UserDao{
 	
 	private static String dbUser;
     private static String dbPwd;
-    
+   
+    /**
+     * Initializes sensitive database credentials after bean construction using Azure Key Vault.
+     * This method is automatically called after the Spring component is initialized.
+     */
     @PostConstruct
     private static void initSecrets() {
         SecretClient client = AkvSecretHelper.getSecretClient(AkvConstants.akvName);
-        dbUser = "postgres"; //client.getSecret(AkvConstants.databaseUserSecretName).getValue();
-        dbPwd = "2389"; //client.getSecret(AkvConstants.databasePasswordSecretName).getValue();
+        dbUser = client.getSecret(AkvConstants.databaseUserSecretName).getValue();
+        dbPwd = client.getSecret(AkvConstants.databasePasswordSecretName).getValue();
     }
     
+    /**
+     * Inserts a new user record into the database.
+     * @param user The User object to be created.
+     * @return The created User object with generated ID and timestamps.
+     * @throws UserException If insertion fails or DB is unreachable.
+     */
 	public User createUser(User user) throws UserException {
 		Connection conn = DatabaseHelper.connectToDB(DatabaseConstants.databaseName, dbUser, dbPwd, dbUrl);
 		if (conn == null)
@@ -47,7 +58,7 @@ public class UserDao{
 			st = conn.prepareStatement(query);
 			st.setString(1, user.getUserName());
 			st.setString(2, user.getEmailAddress());
-			st.setString(3, DatabaseConstants.active);
+			st.setString(3, DatabaseConstants.ACTIVE);
 			ResultSet rs = st.executeQuery();
 			if(rs.next()) {
 				int id = rs.getInt("user_id");
@@ -64,18 +75,24 @@ public class UserDao{
 		return user;
 	}
 	
+	 /**
+     * Retrieves user details by user ID.
+     * @param userId The user ID.
+     * @return The User object or null if not found.
+     * @throws UserException If DB connection fails or query throws error.
+     */
 	public User getUser(int userId) throws UserException {
 		Connection conn = DatabaseHelper.connectToDB(DatabaseConstants.databaseName, dbUser, dbPwd, dbUrl);
 		if(conn == null) {
 			throw new UserException("Connection is null, object could not be created");
 		}
-		System.out.println("Connection establised with database");
+
 		PreparedStatement st;
 		try {
 			String query = "select * from users where user_id = ? and state = ?";
 			st = conn.prepareStatement(query);
 			st.setInt(1, userId);
-			st.setString(2, DatabaseConstants.active);
+			st.setString(2, DatabaseConstants.ACTIVE);
 			ResultSet rs = st.executeQuery();
 						
 			User user = new User();
@@ -94,6 +111,12 @@ public class UserDao{
 		return null;
 	}
 	
+	 /**
+     * Soft deletes a user by setting their state to INACTIVE.
+     * @param userId The ID of the user to be deleted.
+     * @return True if the record was updated successfully.
+     * @throws UserException If update fails or user doesn't exist.
+     */
 	public boolean deleteUser(int userId) throws UserException {
 		Connection conn = DatabaseHelper.connectToDB(DatabaseConstants.databaseName, dbUser, dbPwd, dbUrl);
 		if(conn == null) {
@@ -103,7 +126,7 @@ public class UserDao{
 		try {
 			String query = "update users set state = ? where user_id = ?";
 			st = conn.prepareStatement(query);
-			st.setString(1, DatabaseConstants.inactive);
+			st.setString(1, DatabaseConstants.INACTIVE);
 			st.setInt(2, userId);
 			int rowsUpdated = st.executeUpdate();
 			if(rowsUpdated == 0) {
@@ -116,6 +139,14 @@ public class UserDao{
 		}				
 	}
 	
+	/**
+     * Updates a user’s name and email by user ID.
+     * @param userId The ID of the user to update.
+     * @param name New name of the user.
+     * @param email New email address of the user.
+     * @return True if the update was successful.
+     * @throws UserException If user doesn't exist or update fails.
+     */
 	public boolean updateUser(int userId, String name, String email) throws UserException {
 		Connection conn = DatabaseHelper.connectToDB(DatabaseConstants.databaseName, dbUser, dbPwd, dbUrl);
 		if(conn == null) {

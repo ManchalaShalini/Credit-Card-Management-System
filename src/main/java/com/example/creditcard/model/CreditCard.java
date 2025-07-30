@@ -1,6 +1,14 @@
 package com.example.creditcard.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+/**
+ * Represents a credit card associated with a user.
+ * 
+ * This class holds card metadata such as the card number and expiry date and other identifiers.
+ */
 public class CreditCard {
+	@JsonIgnore
 	private int cardId;
 	private int userID;
 	private String cardNumber;

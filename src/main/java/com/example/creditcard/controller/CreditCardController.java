@@ -1,21 +1,17 @@
 package com.example.creditcard.controller;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.regex.Pattern;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -27,40 +23,55 @@ import com.example.creditcard.dao.CreditCardDao;
 import com.example.creditcard.exceptions.CreditCardException;
 import com.example.creditcard.model.CreditCard;
 import com.example.creditcard.utils.AkvSecretHelper;
+import com.example.creditcard.utils.CardValidationHelper;
 import com.example.creditcard.utils.ControllerHelper;
 
+/**
+ * REST Controller for managing credit card information.
+ * 
+ * This controller provides endpoints to:
+ * - Store new credit card details
+ * - Update existing card details
+ * - Delete card information
+ * - Retrieve card details by user
+ * - Validate credit card information
+ * 
+ * All sensitive card data is securely stored in Azure Key Vault, and metadata is maintained in the database.
+ */
 @RestController
 @RequestMapping("/api")
 public class CreditCardController {
-	
-	// Blacklisted the following dummy or test card numbers to perform blacklist validation checks on credit card input.
-	 private static final Set<String> BLACKLISTED_CARDS = new HashSet<>(Arrays.asList(
-		        "4111111111111111", "5500000000000004"
-		    ));
-	 
-	 @GetMapping("/storeCardDetails")
-	 public static ResponseEntity<Map<String, Object>> storeCardDetails(@RequestBody(required = false) CreditCard cardDetails) throws CreditCardException {
+		 
+	 /**
+	  * Stores credit card details in Azure Key Vault and metadata in DB.
+	  *
+	  * @param cardDetails JSON payload representing the credit card data.
+	  * @return ResponseEntity with success or error message.
+	  * @throws CreditCardException if validation or storage fails.
+	  */
+	 @PostMapping("/storeCardDetails")
+	 public ResponseEntity<Map<String, Object>> storeCardDetails(@RequestBody(required = false) CreditCard cardDetails) throws CreditCardException {
 		 
 		Map<String, Object> response = new HashMap<>();
 		try {			
 			if (cardDetails == null) {
-	            response.put("error", "User object is null. Please provide user details in the request body.");
+	            response.put("error", "User object is null. Please provide card details in the request body.");
 	            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 	        } 
 			
-			String error = ControllerHelper.validate(cardDetails.getUserID(), CreditCardControllerConstants.userId);
+			String error = ControllerHelper.validate(cardDetails.getUserID(), CreditCardControllerConstants.USER_ID);
+			if(error != null) {
+				response.put("error", error);
+	            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+			}
+						
+			error = ControllerHelper.validate(cardDetails.getCardNumber(), CreditCardControllerConstants.CARD_NUMBER);
 			if(error != null) {
 				response.put("error", error);
 	            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 			}
 			
-			error = ControllerHelper.validate(cardDetails.getCardNumber(), CreditCardControllerConstants.cardNumber);
-			if(error != null) {
-				response.put("error", error);
-	            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-			}
-			
-			error = ControllerHelper.validate(cardDetails.getExpiryDate(), CreditCardControllerConstants.expiryDate);
+			error = ControllerHelper.validate(cardDetails.getExpiryDate(), CreditCardControllerConstants.EXPIRY_DATE);
 			if(error != null) {
 				response.put("error", error);
 	            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
@@ -80,8 +91,15 @@ public class CreditCardController {
 	    return new ResponseEntity<>(response, HttpStatus.CREATED);
 	}
 	
-	@GetMapping("/updateCardDetails")
-	public static ResponseEntity<Map<String, Object>> updateCardDetails(@RequestBody(required = false) CreditCard cardDetails) throws CreditCardException {
+	 /**
+	     * Updates existing credit card details by matching stored secrets.
+	     *
+	     * @param cardDetails Updated card information.
+	     * @return ResponseEntity indicating result.
+	     * @throws CreditCardException if validation or update fails.
+	     */
+	@PutMapping("/updateCardDetails")
+	public ResponseEntity<Map<String, Object>> updateCardDetails(@RequestBody(required = false) CreditCard cardDetails) throws CreditCardException {
 	    Map<String, Object> response = new HashMap<>();
 		try {
 			if (cardDetails == null) {
@@ -89,28 +107,28 @@ public class CreditCardController {
 	            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 	        } 
 			
-			String error = ControllerHelper.validate(cardDetails.getUserID(), CreditCardControllerConstants.userId);			
+			String error = ControllerHelper.validate(cardDetails.getUserID(), CreditCardControllerConstants.USER_ID);			
 			if(error != null) {
 				response.put("error", error);
 	            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 			}
 			
-			error = ControllerHelper.validate(cardDetails.getCardNumber(), CreditCardControllerConstants.cardNumber);
+			error = ControllerHelper.validate(cardDetails.getCardNumber(), CreditCardControllerConstants.CARD_NUMBER);
 			if(error != null) {
 				response.put("error", error);
 	            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 			}
 			
-			error = ControllerHelper.validate(cardDetails.getExpiryDate(), CreditCardControllerConstants.expiryDate);
+			error = ControllerHelper.validate(cardDetails.getExpiryDate(), CreditCardControllerConstants.EXPIRY_DATE);
 			if(error != null) {
 				response.put("error", error);
 	            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 			}
 			
-			List<String> akvSecrets = CreditCardDao.getAkvSecretsByUserId(cardDetails.getUserID());
+			List<String> akvSecrets = CreditCardDao.getActiveAkvSecretsByUserId(cardDetails.getUserID());
 			
 			CreditCardAkvSecretHandler.updateCardDetails(cardDetails, AkvConstants.akvName, akvSecrets);
-			response.put("message", "User details updated successfully");
+			response.put("message", "Card details updated successfully");
 	        return new ResponseEntity<>(response, HttpStatus.OK);
 
 		} catch (Exception e) {
@@ -119,8 +137,15 @@ public class CreditCardController {
 		}
 	}
 	
-	@GetMapping("/deleteCardDetails")
-	public static ResponseEntity<Map<String, Object>> deleteCardDetails(@RequestBody(required = false) CreditCard cardDetails) throws CreditCardException {
+	/**
+     * Deletes a credit card secret from Azure Key Vault and marks it inactive in DB.
+     *
+     * @param cardDetails Card data used to locate and delete the record.
+     * @return ResponseEntity with result message.
+     * @throws CreditCardException if deletion fails or card not found.
+     */
+	@DeleteMapping("/deleteCardDetails")
+	public ResponseEntity<Map<String, Object>> deleteCardDetails(@RequestBody(required = false) CreditCard cardDetails) throws CreditCardException {
 		Map<String, Object> response = new HashMap<>();
 		try {
 			if (cardDetails == null) {
@@ -128,51 +153,77 @@ public class CreditCardController {
 	            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 	        } 
 			
-			String error = ControllerHelper.validate(cardDetails.getUserID(), CreditCardControllerConstants.userId);			
+			String error = ControllerHelper.validate(cardDetails.getUserID(), CreditCardControllerConstants.USER_ID);			
 			if(error != null) {
 				response.put("error", error);
 	            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 			}
 			
-			error = ControllerHelper.validate(cardDetails.getCardNumber(), CreditCardControllerConstants.cardNumber);
+			error = ControllerHelper.validate(cardDetails.getCardNumber(), CreditCardControllerConstants.CARD_NUMBER);
 			if(error != null) {
 				response.put("error", error);
 	            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-			}					
+			}
 			
-			CreditCardDao.updateCardAndSecretMetadataToInactive(cardDetails.getUserID());
+			List<String> akvSecrets = CreditCardDao.getActiveAkvSecretsByUserId(cardDetails.getUserID());			
 			
-			List<String> akvSecrets = CreditCardDao.getAkvSecretsByUserId(cardDetails.getUserID());			
 			// TODO: delete get secret id from d and use that to delete
-			CreditCardAkvSecretHandler.deleteCardDetails(AkvConstants.akvName, akvSecrets, cardDetails.getCardNumber());
+			String akvSecretName = CreditCardAkvSecretHandler.deleteCardDetails(AkvConstants.akvName, akvSecrets, cardDetails.getCardNumber());
+			if(akvSecretName == null) {
+				response.put("message", "Card details does not exist in our system");
+		        return new ResponseEntity<>(response, HttpStatus.OK);
+			}
 			
-			response.put("message", "User deleted successfully");
+			CreditCardDao.updateCardAndSecretMetadataToInactive(cardDetails.getUserID(), akvSecretName);
+						
+			response.put("message", "Card details deleted successfully");
 	        return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (Exception e) {
-			response.put("error", "Failed to delete User: " + e.getMessage());
+			response.put("error", "Failed to delete Card details: " + e.getMessage());
 	        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 	
-	@GetMapping("/getCardDetails")
-	public static ResponseEntity<?> getCardDetails(@PathVariable int userId) throws CreditCardException{
-		List<String> cardDetails = new ArrayList<>();
+	 /**
+     * Fetches all credit cards stored for a given user ID.
+     *
+     * @param userId The user's unique identifier.
+     * @return List of CreditCard objects or error message.
+     * @throws CreditCardException if validation or retrieval fails.
+     */
+	@GetMapping("/getCardDetails/{userId}")
+	public ResponseEntity<?> getCardDetails(@PathVariable int userId) throws CreditCardException{
+		List<CreditCard> cardDetails = new ArrayList<>();
 		try {
-			String error = ControllerHelper.validate(userId, CreditCardControllerConstants.userId);
+			String error = ControllerHelper.validate(userId, CreditCardControllerConstants.USER_ID);
 			if(error != null) {				
 	            return ResponseEntity.badRequest().body("Please input the user Id for which you would like to retrieve the Credit cards information");
 			}
-			List<String> akvSecrets = CreditCardDao.getAkvSecretsByUserId(userId);
+			List<String> akvSecrets = CreditCardDao.getActiveAkvSecretsByUserId(userId);
 			
-			cardDetails = CreditCardAkvSecretHandler.getCardDetailsByUser(AkvConstants.akvName, akvSecrets);			
+			cardDetails = CreditCardAkvSecretHandler.getCardDetailsByUser(AkvConstants.akvName, akvSecrets, userId);			
 		} catch (Exception e) {
 			return ResponseEntity.internalServerError().body("Failed to get the Card details");
 		}
 		return ResponseEntity.ok(cardDetails);
 	}
 	
+	/**
+     * Validates the card details provided by user.
+     *
+     * Performs:
+     * - Null checks
+     * - Format validation
+     * - Expiry date validation
+     * - Luhn checksum validation
+     * - Blacklist check
+     *
+     * @param creditcard Card data to validate.
+     * @return ResponseEntity with success or validation error.
+     * @throws Exception if any validation or parsing fails.
+     */
 	@PostMapping("/validateCardDetails")
-	public static ResponseEntity<Map<String, Object>> validateCardDetails(@RequestBody(required = false) CreditCard creditcard) throws Exception {
+	public ResponseEntity<Map<String, Object>> validateCardDetails(@RequestBody(required = false) CreditCard creditcard) throws Exception {
 	    Map<String, Object> response = new HashMap<>();
 	    if (creditcard == null) {
             response.put("error", "Card object is null. Please provide card details in the request body.");
@@ -182,94 +233,44 @@ public class CreditCardController {
 		String cardNumber = creditcard.getCardNumber();
 		String expiryDate = creditcard.getExpiryDate();
 		
-		String error = ControllerHelper.validate(cardNumber, CreditCardControllerConstants.cardNumber);
+		String error = ControllerHelper.validate(cardNumber, CreditCardControllerConstants.CARD_NUMBER);
 		if(error != null) {
 			response.put("error", error);
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 		}
 		
-		error = ControllerHelper.validate(expiryDate, CreditCardControllerConstants.expiryDate);
+		error = ControllerHelper.validate(expiryDate, CreditCardControllerConstants.EXPIRY_DATE);
 		if(error != null) {
 			response.put("error", error);
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 		}
 		
-		if(!isVisaOrMasterCard(cardNumber)) {
+		cardNumber = cardNumber.replaceAll("\\s", "");
+		if(!CardValidationHelper.isVisaOrMasterCard(cardNumber)) {
 			response.put("error", "Invalid credit card, Only Visa and Mastercard are supported");
 			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 		}
 		
-		if(!isValidCardLength(cardNumber)) {
+		if(!CardValidationHelper.isValidCardLength(cardNumber)) {
 			response.put("error", "Invalid card number length for Visa and MasterCard");
 			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 		}
 		
-		if(!isExpiryValid(expiryDate)) {
+		if(!CardValidationHelper.isExpiryValid(expiryDate)) {
 			response.put("error", "Card is expired");
 			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 		}
 		
-		if(isBlacklisted(cardNumber)) {
+		if(CardValidationHelper.isBlacklisted(cardNumber)) {
 			response.put("error", "Card is blacklisted");
 			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 		}
 		
-		cardNumber = cardNumber.replaceAll("\\s", "");
-		if(!isValidCardNumber(cardNumber)) {
+		if(!CardValidationHelper.isValidCardNumber(cardNumber)) {
 			response.put("error", "Invalid card number (Luhn check failed)");
 			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 		}
 		response.put("message", "Card validated successfully");
 		return new ResponseEntity<>(response, HttpStatus.OK);
-	}
-
-	private static boolean isValidCardNumber(String cardNumber) {
-		int sum = 0;
-        boolean alternate = false;
-        for (int i = cardNumber.length() - 1; i >= 0; i--) {
-            int n = Character.getNumericValue(cardNumber.charAt(i));
-            if (alternate) {
-                n *= 2;
-                if (n > 9) n -= 9;
-            }
-            sum += n;
-            alternate = !alternate;
-        }
-        return (sum % 10 == 0);
-	}
-
-	private static boolean isBlacklisted(String cardNumber) {		
-		return BLACKLISTED_CARDS.contains(cardNumber);
-	}
-
-	private static boolean isExpiryValid(String expiryDate) throws CreditCardException {
-		if (!Pattern.matches("(0[1-9]|1[012])/\\d{2}", expiryDate)) {
-            throw new CreditCardException("Expiry Date is in a wrolng format, please provide the details in MM/YY format");
-        }
-		String pattern = "MM/yy";
-        Date expDate = null;
-        try {
-            expDate = new SimpleDateFormat(pattern).parse(expiryDate);
-            return new Date().before(expDate);
-        } catch (Exception e) {
-            throw new CreditCardException("Error while parsing Date", e);
-        }
-	}
-
-	private static boolean isValidCardLength(String cardNumber) throws CreditCardException {
-		if (cardNumber.startsWith("4")) {
-            return cardNumber.length() == 13 || cardNumber.length() == 16 || cardNumber.length() == 19;
-        } else if (cardNumber.matches("^(5[1-5]|2(2[2-9]|[3-6][0-9]|7[01]|720)).*")) {
-            return cardNumber.length() == 16;
-        }
-        return false;
-	}
-
-	private static boolean isVisaOrMasterCard(String cardNumber) {
-		return cardNumber.startsWith("4") || // Visa
-	           (cardNumber.startsWith("51") || cardNumber.startsWith("52") ||
-	            cardNumber.startsWith("53") || cardNumber.startsWith("54") ||
-	            cardNumber.startsWith("55") || // MasterCard (old range)
-	            cardNumber.matches("^2(2[2-9]|[3-6][0-9]|7[01]|720).*")); // MasterCard (new range)
 	}
 }
