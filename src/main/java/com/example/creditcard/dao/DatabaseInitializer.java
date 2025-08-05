@@ -4,12 +4,14 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import com.azure.security.keyvault.secrets.SecretClient;
+import com.example.creditcard.akv.CreditCardAkvSecretHandler;
 import com.example.creditcard.constants.AkvConstants;
 import com.example.creditcard.constants.DatabaseConstants;
 import com.example.creditcard.utils.AkvSecretHelper;
@@ -17,6 +19,10 @@ import com.example.creditcard.utils.DatabaseHelper;
 
 import jakarta.annotation.PostConstruct;
 
+/**
+ * This class is responsible for initializing, creating, and dropping database tables 
+ * for the Credit Card Management System. It also creates database if it not exists during application start.
+ */
 @Component
 public class DatabaseInitializer {
 	
@@ -39,6 +45,11 @@ private static final Logger logger = LoggerFactory.getLogger(DatabaseInitializer
         dbPwd = client.getSecret(AkvConstants.databasePasswordSecretName).getValue();
     }
     
+    /**
+     * Creates required PostgreSQL database tables and sequences if they do not already exist.
+     * 
+     * @throws Exception if a database connection cannot be established
+     */
     public void createTables() throws Exception {
     	Connection conn = DatabaseHelper.connectToDB(DatabaseConstants.databaseName, dbUser, dbPwd, dbUrl);
 		if (conn == null)
@@ -115,6 +126,11 @@ private static final Logger logger = LoggerFactory.getLogger(DatabaseInitializer
 		}
     }
 
+    /**
+     * Drops all database tables and associated AKV secrets.
+     *
+     * @throws Exception if the database connection fails
+     */
 	public void dropTables() throws Exception {
 		Connection conn = DatabaseHelper.connectToDB(DatabaseConstants.databaseName, dbUser, dbPwd, dbUrl);
 		if (conn == null)
@@ -127,8 +143,8 @@ private static final Logger logger = LoggerFactory.getLogger(DatabaseInitializer
 			String query = "DROP TABLE IF EXISTS public.cards";
 			st.executeUpdate(query);
 			
-			//TODO: azure secrets to be deleted, get active secrets from akvsecrets table and write a method in akv sceret handler to 
-			//delete all these secrets data 
+			List<String> akvSecrets = CreditCardDao.getActiveAkvSecrets();
+			CreditCardAkvSecretHandler.deleteAkSecrets(AkvConstants.akvName, akvSecrets);			
 			
 			query = "DROP TABLE IF EXISTS public.akvsecrets;";
 			st.executeUpdate(query);
@@ -143,9 +159,13 @@ private static final Logger logger = LoggerFactory.getLogger(DatabaseInitializer
 		}
 	}
 
+	/**
+     * Creates the specified database if it doesn't already exist.
+     *
+     * @param dbName The name of the database to create
+     * @throws Exception if a connection or query fails
+     */
 	public void createDatabaseIfNotExists(String dbName) throws Exception {
-		logger.info("dbURL:"+ DatabaseConstants.dbUrl+"postgres");
-		logger.info(dbUser + " " + dbPwd);
 		Connection conn = DriverManager.getConnection(DatabaseConstants.dbUrl+"postgres", dbUser, dbPwd);
 		if (conn == null)
 		{

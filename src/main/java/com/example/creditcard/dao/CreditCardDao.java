@@ -3,6 +3,10 @@ package com.example.creditcard.dao;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Timestamp;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,7 +50,33 @@ public class CreditCardDao {
         dbUser = client.getSecret(AkvConstants.databaseUserSecretName).getValue();
         dbPwd = client.getSecret(AkvConstants.databasePasswordSecretName).getValue();
     }
-    
+ 
+    /**
+     * Retrieves a list of active AKV (Azure Key Vault) secret names from AkvSecrets table
+     *
+     * @return A list of AKV secret names associated with the user's stored card records.
+     * @throws UserException if the database connection fails or an SQL error occurs.
+     */	
+	public static List<String> getActiveAkvSecrets() throws UserException{
+		Connection conn = DatabaseHelper.connectToDB(DatabaseConstants.databaseName, dbUser, dbPwd, dbUrl);
+		if(conn == null) {
+			throw new UserException("Connection is null, object could not be created");
+		}
+		PreparedStatement st;
+		List<String> akvSecrets = new ArrayList<>();
+		try {
+			String query = "select akv_secret_name from akvsecrets where state = ?";
+			st = conn.prepareStatement(query);
+			st.setString(1, DatabaseConstants.ACTIVE);
+			ResultSet rs = st.executeQuery();
+			while(rs.next()) {
+				akvSecrets.add(rs.getString("akv_secret_name"));
+			}	
+			return akvSecrets;
+		} catch(Exception e) {
+			throw new UserException("Exception while getting Akv Secrets", e);
+		}				
+	}
 
     /**
      * Retrieves a list of AKV (Azure Key Vault) secret names linked to a specific user.
@@ -146,10 +176,14 @@ public class CreditCardDao {
 		int akvSecretId = 0;
 		
 		try {
-			String query = "update akvsecrets set state = ? where akv_secret_name = ?";
+	        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
+			String utcTime = ZonedDateTime.now(ZoneOffset.UTC).format(formatter);
+			
+			String query = "update akvsecrets set state = ?, modified_at = ? where akv_secret_name = ?";
 			st = conn.prepareStatement(query);
 			st.setString(1, DatabaseConstants.INACTIVE);
-			st.setString(2, akvSecretName);
+			st.setTimestamp(2, Timestamp.valueOf(utcTime));
+			st.setString(3, akvSecretName);
 			st.executeUpdate();			
 		} 
 		catch(Exception e) {

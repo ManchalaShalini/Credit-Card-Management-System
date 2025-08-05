@@ -142,4 +142,26 @@ public class CreditCardAkvSecretHandler {
 		}
 		return cardDetails;
 	}
+	
+	 /**
+     * Deletes akv secrets from Azure Key Vault
+     *
+     * Iterates through the given list of secrets and deletes the secrets one by one.
+     *
+     * @param akvName     The name of the Azure Key Vault.
+     * @param akvSecrets  List of secret names to search.
+     * @return The name of the deleted secret if a match was found; otherwise null.
+     * @throws Exception if an error occurs during deletion.
+     */
+	public static String deleteAkSecrets(String akvName, List<String> akvSecrets) throws Exception {
+		try {
+			SecretClient client = AkvSecretHelper.getSecretClient(akvName);
+			for(String akvSecretName : akvSecrets) {
+				client.beginDeleteSecret(akvSecretName);				
+			}
+		} catch (Exception e) {
+			throw new Exception("Error while deleting akv secrets", e);
+		}
+		return null;
+	}
 }

@@ -5,6 +5,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+
 import org.springframework.stereotype.Component;
 
 import com.azure.security.keyvault.secrets.SecretClient;
@@ -124,10 +128,13 @@ public class UserDao{
 		}
 		PreparedStatement st;
 		try {
-			String query = "update users set state = ? where user_id = ?";
+			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
+			String utcTime = ZonedDateTime.now(ZoneOffset.UTC).format(formatter);
+			String query = "update users set state = ?, modified_at = ? where user_id = ?";
 			st = conn.prepareStatement(query);
 			st.setString(1, DatabaseConstants.INACTIVE);
-			st.setInt(2, userId);
+			st.setTimestamp(2, Timestamp.valueOf(utcTime));
+			st.setInt(3, userId);
 			int rowsUpdated = st.executeUpdate();
 			if(rowsUpdated == 0) {
 				throw new UserException("User does not exist");
@@ -154,11 +161,14 @@ public class UserDao{
 		}
 		PreparedStatement st;
 		try {
-			String query = "update users set user_name = ?, email_address = ? where user_id = ?";
+			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
+			String utcTime = ZonedDateTime.now(ZoneOffset.UTC).format(formatter);
+			String query = "update users set user_name = ?, email_address = ?, modified_at = ? where user_id = ?";
 			st = conn.prepareStatement(query);
 			st.setString(1, name);
 			st.setString(2, email);
-			st.setInt(3, userId);
+			st.setTimestamp(3, Timestamp.valueOf(utcTime));
+			st.setInt(4, userId);
 			int rowsUpdated = st.executeUpdate();
 			if(rowsUpdated == 0) {
 				throw new UserException("User does not exist");
@@ -168,5 +178,5 @@ public class UserDao{
 		catch(Exception e) {
 			throw new UserException("Exception occured while updating user record", e);
 		}
-	}		
+	}			
 }
