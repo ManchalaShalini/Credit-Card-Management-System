@@ -41,7 +41,7 @@ The Credit Card Management System is a Spring Boot based Java application design
 - GET /creditcard/getCard/{userId} -- Fetch credit card details for a user
 - POST /creditcard/validateCard -- Validate credit card details 
 
-For API Request and Response, refer to section [API Request / Response](#api-request-response)
+For API Request and Response, refer to section [API Request / Response](#api-request--response)
 
 #### Sequence Diagram
 
