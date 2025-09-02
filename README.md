@@ -10,7 +10,7 @@ The Credit Card Management System is a Spring Boot based Java application design
 
 #### Architecture Overview
 
-![Architecture Diagram](images/ArchitectureDiagrams/Architecture_Diagram.PNG)
+![Architecture Diagram](images/ArchitectureDiagrams/Architecture_Diagram.png)
 
 - **Azure Key Vault (AKV)** - Provides secure storage and management of sensitive information (i.e., credit card details).  
 - **Azure Database for PostgreSQL server** - Stores metadata information for User and CreditCard.
@@ -25,7 +25,7 @@ The Credit Card Management System is a Spring Boot based Java application design
 
 #### Database Schema
 
-![Database Schema Diagram](images/DatabaseSchema/Database_Schema.PNG)
+![Database Schema Diagram](images/DatabaseSchema/Database_Schema.png)
 
 #### API Design
 ##### User Controller API's
@@ -46,31 +46,31 @@ For API Request and Response, refer to section [API Request / Response](#api-req
 #### Sequence Diagram
 
 ###### Create User
-![Create User Sequence Diagram](images/SequenceDiagrams/CreateUser.PNG)
+![Create User Sequence Diagram](images/SequenceDiagrams/CreateUser.png)
 
 ###### Update User
-![Update User Sequence Diagram](images/SequenceDiagrams/UpdateUser.PNG)
+![Update User Sequence Diagram](images/SequenceDiagrams/UpdateUser.png)
 
 ###### Delete User
-![Delete User Sequence Diagram](images/SequenceDiagrams/DeleteUser.PNG)
+![Delete User Sequence Diagram](images/SequenceDiagrams/DeleteUser.png)
 
 ###### Get User
-![Get User Sequence Diagram](images/SequenceDiagrams/GetUser.PNG)
+![Get User Sequence Diagram](images/SequenceDiagrams/GetUser.png)
 
 ###### Save Card
-![Save Card Sequence Diagram](images/SequenceDiagrams/SaveCard.PNG)
+![Save Card Sequence Diagram](images/SequenceDiagrams/SaveCard.png)
 
 ###### Update Card
-![Update Card Sequence Diagram](images/SequenceDiagrams/UpdateCard.PNG)
+![Update Card Sequence Diagram](images/SequenceDiagrams/UpdateCard.png)
 
 ###### Delete Card
-![Delete Card Sequence Diagram](images/SequenceDiagrams/DeleteCard.PNG)
+![Delete Card Sequence Diagram](images/SequenceDiagrams/DeleteCard.png)
 
 ###### Get Card
-![Get Card Sequence Diagram](images/SequenceDiagrams/GetCard.PNG)
+![Get Card Sequence Diagram](images/SequenceDiagrams/GetCard.png)
 
 ###### Validate Card
-![Validate Card Sequence Diagram](images/SequenceDiagrams/ValidateCard.PNG)
+![Validate Card Sequence Diagram](images/SequenceDiagrams/ValidateCard.png)
 
 
 #### Getting Started

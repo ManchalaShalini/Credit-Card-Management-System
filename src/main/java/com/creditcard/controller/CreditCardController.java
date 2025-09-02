@@ -22,9 +22,11 @@ import com.creditcard.constants.AkvConstants;
 import com.creditcard.constants.CreditCardConstants;
 import com.creditcard.constants.DatabaseConstants;
 import com.creditcard.dao.CreditCardDao;
+import com.creditcard.dao.UserDao;
 import com.creditcard.model.CreditCard;
 import com.creditcard.model.ValidationStatus;
 import com.creditcard.model.CreditCardVault;
+import com.creditcard.model.User;
 import com.creditcard.utils.AkvSecretHelper;
 import com.creditcard.utils.CardValidationHelper;
 import com.creditcard.utils.ControllerHelper;
@@ -48,6 +50,9 @@ public class CreditCardController {
 	
 	 @Autowired
 	 private CreditCardDao creditCardDao;
+	 
+	 @Autowired
+	 private UserDao userDao;
 	 
 	 @Autowired
 	 private CreditCardAkvSecretHandler creditCardAkvSecretHandler;
@@ -78,7 +83,13 @@ public class CreditCardController {
 			if(validationResponse != null) return validationResponse;			
 			
 			validationResponse = validateExpiryDate(creditcard.getExpiryDate());			
-			if(validationResponse != null) return validationResponse;			
+			if(validationResponse != null) return validationResponse;		
+			
+			User user = userDao.getUser(creditcard.getUserID());
+			if(user == null) {
+				response.put("error", "Cannot save card details. Please create user before saving the card details.");
+		        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+			}
 							
 			String secretName = akvSecretHelper.generateSecretName();
 
