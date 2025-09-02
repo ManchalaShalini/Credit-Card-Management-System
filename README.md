@@ -16,7 +16,7 @@ The Credit Card Management System is a Spring Boot based Java application design
 - **Azure Database for PostgreSQL server** - Stores metadata information for User and CreditCard.
 
 ### Key Components
-- **Controllesr Layer** - Handles API requests and responses (e.g., UserController, CreditCardController).
+- **Controller Layer** - Handles API requests and responses (e.g., UserController, CreditCardController).
 - **Data Access Layer** - Connects to Azure Database for PostgreSQL server to store and retrieve application data.
 - **CreditCardAkvSecretHandler.java** - Handler class to interact with Azure Key Vault for storing, updating, retrieving and deleting credit card information stored as secrets.
 
